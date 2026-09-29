@@ -1,55 +1,90 @@
-# Dugout2Home
+# Dugout2Home — onboarding and team access
 
-**Turn every game into a development plan.**
+This is the complete updated source for `butcherchase/Dugout2home`, based on the GitHub main branch downloaded September 29, 2026. Start with **COPY-OVER.md** for the short handoff.
 
-Dugout2Home is a softball development platform built around four connected engines:
+## Included
 
-1. Scorebook Analyzer
-2. Individual Player Development
-3. Practice Planner
-4. Game / Tournament Recaps
+- Account signup, email/password sign-in, and sign-out.
+- Create a team (creator becomes TEAM_ADMIN) or request to join using a private team code.
+- Team admin approval, rejection, and removal of access.
+- TEAM_ADMIN, COACH, PARENT, and PLAYER roles, stored per team membership.
+- Persistent user/team selection, plus switching between approved teams.
+- Admin roster creation and explicit parent/child or player/self roster links.
+- Server checks on every protected page, API endpoint, and mutation; navigation follows the approved role.
+- Parent/player pages fetch only linked players and explicitly shared evaluation notes/scores. Internal evidence is never included in family responses.
+- Existing image, PDF, and CSV scorebook analysis. Team perspective and practice age group now come from the approved membership, rather than a fixed team/10U value.
 
-## MVP architecture
+## Permissions
 
-- Next.js + TypeScript
-- PostgreSQL + Prisma
-- OpenAI Responses API for vision + structured scorebook extraction
-- Railway-ready deployment
+| Capability | Team admin | Coach | Parent | Player |
+| --- | --- | --- | --- | --- |
+| Score analyzer / practice generation | Yes | Yes | No | No |
+| Team roster and internal evaluations | Yes | Yes | No | No |
+| Share or hide evaluation feedback | Yes | Yes | No | No |
+| Add roster players / approve requests / rotate code | Yes | No | No | No |
+| Family development view | Via coach view | Via coach view | Linked children | Own linked player |
+| Team data while pending or rejected | No | No | No | No |
+
+Creating a new team does not grant access to another existing team. Parent/player links are confirmed by the admin, never granted from a typed name or email match. A PLAYER approval requires exactly one roster entry; PARENT requires one or more; COACH requires none. Join requests cannot ask for TEAM_ADMIN. Only creation grants that role in this version. To correct an approved role/link, remove that membership’s access, have the person request to join again, and approve with the correct role/links.
 
 ## Local setup
 
-```bash
-cp .env.example .env.local
-npm install
-npm run prisma:generate
+Use Node.js 22.13 or later and PostgreSQL 13 or later. Copy `.env.example` to `.env`, then set your database URL, `APP_URL=http://localhost:3000`, and your existing OpenAI settings. Prisma CLI and Next.js both read `.env`.
+
+```sh
+npx pnpm@11.19.0 install
+npm run prisma:migrate
 npm run dev
 ```
 
-Set `OPENAI_API_KEY`. A database is not required to preview the current UI; PostgreSQL persistence is the next wiring step.
+The lockfile records the versions tested. npm scripts work after pnpm installs dependencies. On a fresh database, both migrations run automatically. For a database that already has the old tables, use the upgrade instructions in COPY-OVER.md first.
 
-## Core flow
+## First use
 
-`Scorebook image -> structured game analysis -> player/team development priorities -> practice plan -> recap -> next game`
+1. Create your account and choose Create a team.
+2. Enter the team name exactly as it appears in your scorebooks, age group, and season.
+3. In Team settings, add your players and share the team code privately.
+4. Each coach, parent, or player creates a separate account and submits a join request.
+5. Review the person’s identity, choose their role, select the correct roster links, and approve.
+6. Parents and players open My development. Coaches open the team dashboard and analyzer.
 
-## Implemented now
+The approval queue is in the app; there are no email notifications yet. A pending person can refresh My teams after approval. Multiple children can be linked to one parent.
 
-- Responsive product dashboard
-- Scorebook image upload
-- Vision analysis through OpenAI Responses API
-- Strict structured output for game/player data
-- Evidence-based development priorities
-- AI-generated 75-minute practice plan
-- Player development dashboard shell
-- Tournament recap dashboard shell
-- PostgreSQL/Prisma schema for users, teams, players, games, evaluations, practices, tournaments
+## Database upgrades
 
-## Next implementation phase
+`202609290001_baseline` represents the original repository schema. `202609290002_onboarding` is the additive upgrade, with role conversion inside a transaction:
 
-- Persist analyses to PostgreSQL
-- Team/coach authentication
-- Roster CRUD
-- Match extracted player names to roster players
-- Multi-game tournament aggregation
-- Manual coach correction screen for low-confidence scorebook events
-- Parent-facing player development view
-- PDF/GameChanger import
+- OWNER and HEAD_COACH become TEAM_ADMIN.
+- ASSISTANT_COACH becomes COACH.
+- Existing memberships remain approved; all new requests default to pending.
+- Existing game, player, tournament, and practice rows are preserved.
+- Existing evaluations default to private, and existing family memberships receive no automatic player links.
+- Existing users have no password hash, since the original schema had no authentication. They cannot claim those accounts through public signup. A trusted operator can provision a password after verifying the owner using `npm run account:set-password -- person@example.com` in a terminal with DATABASE_URL set. Password input is hidden and existing sessions are invalidated. The same tool supports manual account recovery.
+
+`prisma/legacy-schema.prisma` is an archival baseline used only by the guarded baseline command. Continue editing `prisma/schema.prisma` for future development.
+
+## Authentication details
+
+Passwords use salted scrypt hashes. Session cookies contain random tokens; only SHA-256 token hashes are stored in PostgreSQL. Cookies are HttpOnly, SameSite=Lax, and Secure with a `__Host-` prefix in production; sessions expire after seven days. Logout deletes the server session. Permissions are fetched from the database on each request, so removing access does not wait for a cookie to expire. Durable rate counters limit signup/sign-in, team creation, and code guesses. Keep Railway’s trusted proxy headers configured correctly for IP throttling; per-email limits also apply.
+
+Next.js Server Actions provide same-origin checks, and the two AI API routes independently check APP_URL. All authorization is also enforced in the server functions, following the [Next.js authentication guidance](https://nextjs.org/docs/app/guides/authentication). There is no role or team authority in localStorage or submitted hidden fields. Use HTTPS for production cookies.
+
+There is no automated email verification, email password reset, MFA, or invitation email in this phase. Admin approval verifies team membership; it is not proof of email ownership. Session cleanup can periodically delete expired Session rows, and stale RateLimit rows can be removed after their window expires.
+
+## Scope
+
+This phase adds onboarding and authorization. Saving individual analyses, creating tournaments, adding evaluations, and generating a recruiting/development history remain future work. The existing practice and tournament pages are clearly labeled example content. The analyzer still returns results for the current session, as before; this update does not claim those results are saved. The family screen is real database-backed access with an honest empty state, not demo players or invented development scores.
+
+## Verification
+
+```sh
+npm run typecheck
+npm test
+npm run build
+```
+
+For end-to-end tests, create a disposable LOCAL PostgreSQL database, migrate it, and start a production build at port 3100 with `DATABASE_URL` pointing to that database and `APP_URL=http://localhost:3100`. Leave OPENAI_API_KEY unset for this particular integration suite. Set `D2H_TEST_URL=http://localhost:3100` in the test terminal, then run `npm run test:integration`. The suite creates named test users/teams and removes only those rows when done. It refuses non-local hosts.
+
+`npm run test:analyzer` uses the same disposable DATABASE_URL, starts a separate local app on port 3102 and a mock AI service on 3101, and verifies all upload branches without calling OpenAI. Ports 3101–3102 must be free.
+
+See VALIDATION.md for the checks completed for this handoff. Live Railway deployment and real AI extraction accuracy were not tested.

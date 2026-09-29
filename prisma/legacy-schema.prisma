@@ -8,16 +8,10 @@ datasource db {
 }
 
 enum UserRole {
-  TEAM_ADMIN
-  COACH
+  OWNER
+  HEAD_COACH
+  ASSISTANT_COACH
   PARENT
-  PLAYER
-}
-
-enum MembershipStatus {
-  PENDING
-  APPROVED
-  REJECTED
 }
 
 enum EvaluationSource {
@@ -40,9 +34,6 @@ model User {
   id          String       @id @default(cuid())
   email       String       @unique
   name        String?
-  passwordHash String?
-  activeTeamId String?
-  sessions    Session[]
   memberships TeamMember[]
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
@@ -53,7 +44,6 @@ model Team {
   name        String
   ageGroup    String?
   season      String?
-  joinCode    String       @unique @default(uuid())
   members     TeamMember[]
   players     Player[]
   games       Game[]
@@ -68,15 +58,11 @@ model TeamMember {
   userId    String
   teamId    String
   role      UserRole
-  status    MembershipStatus @default(PENDING)
-  playerRequest String?
-  playerLinks PlayerAccess[]
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
 
   @@unique([userId, teamId])
-  @@index([teamId, status])
 }
 
 model Player {
@@ -90,7 +76,6 @@ model Player {
   positions   String[]
   active      Boolean                @default(true)
   team        Team                   @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  accessLinks PlayerAccess[]
   evaluations PlayerEvaluation[]
   gameLines   PlayerGameLine[]
   createdAt   DateTime               @default(now())
@@ -152,7 +137,6 @@ model PlayerEvaluation {
   score     Int?
   note      String?
   evidence  String?
-  sharedWithFamily Boolean @default(false)
   player    Player           @relation(fields: [playerId], references: [id], onDelete: Cascade)
   game      Game?            @relation(fields: [gameId], references: [id], onDelete: SetNull)
   createdAt DateTime         @default(now())
@@ -169,29 +153,4 @@ model Practice {
   team            Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
-}
-
-
-model Session {
-  tokenHash String @id
-  userId String
-  expiresAt DateTime
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  @@index([userId])
-  @@index([expiresAt])
-}
-
-model PlayerAccess {
-  memberId String
-  playerId String
-  member TeamMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
-  player Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
-  @@id([memberId, playerId])
-  @@index([playerId])
-}
-
-model RateLimit {
-  key String @id
-  attempts Int
-  windowStart DateTime
 }

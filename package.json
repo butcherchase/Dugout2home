@@ -4,11 +4,17 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "prisma generate && next build",
     "start": "next start",
-    "lint": "next lint",
     "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate deploy"
+    "prisma:migrate": "prisma migrate deploy",
+    "postinstall": "prisma generate",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test tests/*.test.ts",
+    "prisma:baseline": "node scripts/baseline.mjs",
+    "account:set-password": "tsx scripts/set-password.ts",
+    "test:integration": "node tests/integration.mjs",
+    "test:analyzer": "node tests/analyzer.mjs"
   },
   "dependencies": {
     "@prisma/client": "^6.0.0",
@@ -16,13 +22,19 @@
     "openai": "^6.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "zod": "^4.0.0"
+    "zod": "^4.0.0",
+    "server-only": "^0.0.1"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "prisma": "^6.0.0",
-    "typescript": "^5.7.0"
-  }
+    "typescript": "^5.7.0",
+    "tsx": "^4.20.0"
+  },
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "packageManager": "pnpm@11.19.0"
 }

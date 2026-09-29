@@ -1,3 +1,4 @@
+import { coachApiAccess } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { buildPracticePlan } from "@/lib/ai";
@@ -15,12 +16,14 @@ const requestSchema = z.object({
 
 export async function POST(request: Request) {
   try {
+    const access = await coachApiAccess(request);
+    if ("error" in access) return NextResponse.json({ error: access.error }, { status: access.status });
     if (!process.env.OPENAI_API_KEY) {
       return NextResponse.json({ error: "OPENAI_API_KEY is not configured." }, { status: 503 });
     }
 
     const input = requestSchema.parse(await request.json());
-    const plan = await buildPracticePlan(input);
+    const plan = await buildPracticePlan({ ...input, ageGroup: access.member.team.ageGroup ?? undefined });
     return NextResponse.json({ plan });
   } catch (error) {
     console.error(error);
