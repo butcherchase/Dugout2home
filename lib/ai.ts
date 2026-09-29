@@ -105,12 +105,38 @@ export async function analyzeScorebook(dataUrl: string): Promise<GameAnalysis> {
       role: "user",
       content: [
         {
-          type: "input_text",
-          text: `You are the Dugout2Home softball scorebook analyst. Analyze this scorebook conservatively. Do not invent unreadable events. Use confidence scores. Extract game events and player summaries, then identify development priorities. Separate what the team excelled at from what should be practiced next. If opponent/date/score cannot be read, use "Unknown" or 0 and reduce confidence.`
-        },
-        { type: "input_image", image_url: dataUrl, detail: "auto" }
-      ]
-    }],
+          type ScorebookInput =
+  | { kind: "image"; data: string }
+  | { kind: "pdf"; data: string; filename: string };
+
+export async function analyzeScorebook(input: ScorebookInput): Promise<GameAnalysis> {
+  const source =
+    input.kind === "pdf"
+      ? {
+          type: "input_file" as const,
+          file_data: input.data,
+          filename: input.filename
+        }
+      : {
+          type: "input_image" as const,
+          image_url: input.data,
+          detail: "auto" as const
+        };
+
+  const response = await client.responses.create({
+    model,
+    input: [
+      {
+        role: "user",
+        content: [
+          {
+            type: "input_text",
+            text: `You are the Dugout2Home softball scorebook analyst. Analyze this scorebook conservatively. Do not invent unreadable events. Use confidence scores. Extract game events and player summaries, then identify development priorities. Separate what the team excelled at from what should be practiced next. If opponent/date/score cannot be read, use "Unknown" or 0 and reduce confidence.`
+          },
+          source
+        ]
+      }
+    ],
     text: {
       format: {
         type: "json_schema",
