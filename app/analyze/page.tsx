@@ -73,14 +73,15 @@ export default function AnalyzePage() {
       <h1>Scorebook Analyzer</h1>
 
       <p className="lede">
-        Upload a scorebook photo or PDF. Dugout2Home extracts what happened
-        and turns it into development priorities—not just a text recap.
+        Upload a scorebook photo, PDF, or GameChanger CSV. Dugout2Home
+        analyzes what happened and turns the game into team and player
+        development priorities.
       </p>
 
       <div className="upload-card">
         <input
           type="file"
-          accept="image/*,application/pdf"
+          accept="image/*,application/pdf,text/csv,.csv"
           onChange={(e) => setFile(e.target.files?.[0] || null)}
         />
 
@@ -89,10 +90,18 @@ export default function AnalyzePage() {
           disabled={!file || loading}
           onClick={analyze}
         >
-          {loading ? "Analyzing…" : "Analyze scorebook"}
+          {loading ? "Analyzing…" : "Analyze game"}
         </button>
 
-        {file && <small>{file.name}</small>}
+        {file && (
+          <small>
+            Selected: {file.name}
+          </small>
+        )}
+
+        <small>
+          Accepted formats: scorebook photo, PDF, or GameChanger CSV
+        </small>
 
         {error && <p className="error">{error}</p>}
       </div>
@@ -116,6 +125,12 @@ export default function AnalyzePage() {
               <span>Confidence</span>
               <strong>{Math.round(analysis.confidence * 100)}%</strong>
             </div>
+          </section>
+
+          <section className="panel">
+            <span className="eyebrow">GAME RECAP</span>
+            <h2>What happened</h2>
+            <p>{analysis.summary}</p>
           </section>
 
           <section className="two-col">
@@ -144,7 +159,6 @@ export default function AnalyzePage() {
             <div className="panel-head">
               <div>
                 <span className="eyebrow">DEVELOPMENT PRIORITIES</span>
-
                 <h2>What the game says to practice next</h2>
               </div>
 
@@ -153,7 +167,9 @@ export default function AnalyzePage() {
                 onClick={buildPlan}
                 disabled={planLoading}
               >
-                {planLoading ? "Building…" : "Build 75-min practice"}
+                {planLoading
+                  ? "Building…"
+                  : "Build 75-min practice"}
               </button>
             </div>
 
@@ -170,7 +186,6 @@ export default function AnalyzePage() {
                     </strong>
 
                     <small>{priority.evidence}</small>
-
                     <small>{priority.recommendation}</small>
                   </div>
                 </div>
@@ -180,7 +195,6 @@ export default function AnalyzePage() {
 
           <section className="panel">
             <span className="eyebrow">PLAYER OUTPUT</span>
-
             <h2>Game-level player development</h2>
 
             <div className="table-wrap">

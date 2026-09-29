@@ -1,7 +1,10 @@
 import OpenAI from "openai";
 import type { GameAnalysis, PracticePlan } from "@/types";
 
-const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
+
 const model = process.env.OPENAI_MODEL || "gpt-6-astra";
 
 const analysisSchema = {
@@ -13,13 +16,22 @@ const analysisSchema = {
     score: {
       type: "object",
       additionalProperties: false,
-      properties: { us: { type: "integer" }, them: { type: "integer" } },
+      properties: {
+        us: { type: "integer" },
+        them: { type: "integer" }
+      },
       required: ["us", "them"]
     },
     confidence: { type: "number" },
     summary: { type: "string" },
-    excelledAt: { type: "array", items: { type: "string" } },
-    workOn: { type: "array", items: { type: "string" } },
+    excelledAt: {
+      type: "array",
+      items: { type: "string" }
+    },
+    workOn: {
+      type: "array",
+      items: { type: "string" }
+    },
     events: {
       type: "array",
       items: {
@@ -27,13 +39,23 @@ const analysisSchema = {
         additionalProperties: false,
         properties: {
           inning: { type: "integer" },
-          half: { type: "string", enum: ["top", "bottom", "unknown"] },
+          half: {
+            type: "string",
+            enum: ["top", "bottom", "unknown"]
+          },
           player: { type: "string" },
           event: { type: "string" },
           result: { type: "string" },
           confidence: { type: "number" }
         },
-        required: ["inning", "half", "player", "event", "result", "confidence"]
+        required: [
+          "inning",
+          "half",
+          "player",
+          "event",
+          "result",
+          "confidence"
+        ]
       }
     },
     playerSummaries: {
@@ -49,9 +71,21 @@ const analysisSchema = {
           strikeouts: { type: "integer" },
           runs: { type: "integer" },
           rbi: { type: "integer" },
-          notes: { type: "array", items: { type: "string" } }
+          notes: {
+            type: "array",
+            items: { type: "string" }
+          }
         },
-        required: ["player", "plateAppearances", "hits", "walks", "strikeouts", "runs", "rbi", "notes"]
+        required: [
+          "player",
+          "plateAppearances",
+          "hits",
+          "walks",
+          "strikeouts",
+          "runs",
+          "rbi",
+          "notes"
+        ]
       }
     },
     priorities: {
@@ -60,16 +94,45 @@ const analysisSchema = {
         type: "object",
         additionalProperties: false,
         properties: {
-          area: { type: "string", enum: ["hitting", "baserunning", "defense", "throwing", "pitching", "situational_awareness"] },
-          level: { type: "string", enum: ["high", "medium", "low"] },
+          area: {
+            type: "string",
+            enum: [
+              "hitting",
+              "baserunning",
+              "defense",
+              "throwing",
+              "pitching",
+              "situational_awareness"
+            ]
+          },
+          level: {
+            type: "string",
+            enum: ["high", "medium", "low"]
+          },
           evidence: { type: "string" },
           recommendation: { type: "string" }
         },
-        required: ["area", "level", "evidence", "recommendation"]
+        required: [
+          "area",
+          "level",
+          "evidence",
+          "recommendation"
+        ]
       }
     }
   },
-  required: ["opponent", "gameDate", "score", "confidence", "summary", "excelledAt", "workOn", "events", "playerSummaries", "priorities"]
+  required: [
+    "opponent",
+    "gameDate",
+    "score",
+    "confidence",
+    "summary",
+    "excelledAt",
+    "workOn",
+    "events",
+    "playerSummaries",
+    "priorities"
+  ]
 } as const;
 
 const practiceSchema = {
@@ -78,7 +141,10 @@ const practiceSchema = {
   properties: {
     title: { type: "string" },
     durationMinutes: { type: "integer" },
-    focus: { type: "array", items: { type: "string" } },
+    focus: {
+      type: "array",
+      items: { type: "string" }
+    },
     blocks: {
       type: "array",
       items: {
@@ -90,62 +156,160 @@ const practiceSchema = {
           purpose: { type: "string" },
           setup: { type: "string" }
         },
-        required: ["minutes", "title", "purpose", "setup"]
-      }
-    },
-    coachNotes: { type: "array", items: { type: "string" } }
-  },
-  required: ["title", "durationMinutes", "focus", "blocks", "coachNotes"]
-} as const;
-
-export async function analyzeScorebook(dataUrl: string): Promise<GameAnalysis> {
-  const response = await client.responses.create({
-    model,
-    input: [{
-      role: "user",
-      content: [
-        {
-          type ScorebookInput =
-  | { kind: "image"; data: string }
-  | { kind: "pdf"; data: string; filename: string };
-
-export async function analyzeScorebook(input: ScorebookInput): Promise<GameAnalysis> {
-  const source =
-    input.kind === "pdf"
-      ? {
-          type: "input_file" as const,
-          file_data: input.data,
-          filename: input.filename
-        }
-      : {
-          type: "input_image" as const,
-          image_url: input.data,
-          detail: "auto" as const
-        };
-
-  const response = await client.responses.create({
-    model,
-    input: [
-      {
-        role: "user",
-        content: [
-          {
-            type: "input_text",
-            text: `You are the Dugout2Home softball scorebook analyst. Analyze this scorebook conservatively. Do not invent unreadable events. Use confidence scores. Extract game events and player summaries, then identify development priorities. Separate what the team excelled at from what should be practiced next. If opponent/date/score cannot be read, use "Unknown" or 0 and reduce confidence.`
-          },
-          source
+        required: [
+          "minutes",
+          "title",
+          "purpose",
+          "setup"
         ]
       }
-    ],
-    text: {
-      format: {
-        type: "json_schema",
-        name: "scorebook_analysis",
-        strict: true,
-        schema: analysisSchema
-      }
+    },
+    coachNotes: {
+      type: "array",
+      items: { type: "string" }
     }
-  });
+  },
+  required: [
+    "title",
+    "durationMinutes",
+    "focus",
+    "blocks",
+    "coachNotes"
+  ]
+} as const;
+
+type ScorebookInput =
+  | {
+      kind: "image";
+      data: string;
+    }
+  | {
+      kind: "pdf";
+      data: string;
+      filename: string;
+    }
+  | {
+      kind: "csv";
+      data: string;
+      filename: string;
+    };
+
+const analyzerPrompt = `
+You are the Dugout2Home softball game analysis engine.
+
+Analyze the supplied softball scorebook or GameChanger data conservatively.
+
+Do not invent information that is not present.
+
+Extract:
+- opponent
+- game date
+- final score
+- player results
+- plate appearances
+- hits
+- walks
+- strikeouts
+- runs
+- RBI
+- game events when available
+- team strengths
+- team weaknesses
+- individual player development observations
+- practice priorities
+
+When structured CSV data is provided, prioritize the actual statistical data over assumptions.
+
+When an image or PDF is unclear, lower confidence rather than guessing.
+
+The goal is not merely to summarize the game. The goal is to turn the game into actionable player and team development priorities.
+`;
+
+export async function analyzeScorebook(
+  input: ScorebookInput
+): Promise<GameAnalysis> {
+  let response;
+
+  if (input.kind === "csv") {
+    response = await client.responses.create({
+      model,
+      input: `${analyzerPrompt}
+
+The following is structured CSV data exported from a softball scoring system such as GameChanger.
+
+Filename: ${input.filename}
+
+CSV DATA:
+----------------
+${input.data}
+----------------
+`,
+      text: {
+        format: {
+          type: "json_schema",
+          name: "scorebook_analysis",
+          strict: true,
+          schema: analysisSchema
+        }
+      }
+    });
+  } else if (input.kind === "pdf") {
+    response = await client.responses.create({
+      model,
+      input: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "input_text",
+              text: analyzerPrompt
+            },
+            {
+              type: "input_file",
+              file_data: input.data,
+              filename: input.filename
+            }
+          ]
+        }
+      ],
+      text: {
+        format: {
+          type: "json_schema",
+          name: "scorebook_analysis",
+          strict: true,
+          schema: analysisSchema
+        }
+      }
+    });
+  } else {
+    response = await client.responses.create({
+      model,
+      input: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "input_text",
+              text: analyzerPrompt
+            },
+            {
+              type: "input_image",
+              image_url: input.data,
+              detail: "auto"
+            }
+          ]
+        }
+      ],
+      text: {
+        format: {
+          type: "json_schema",
+          name: "scorebook_analysis",
+          strict: true,
+          schema: analysisSchema
+        }
+      }
+    });
+  }
 
   return JSON.parse(response.output_text) as GameAnalysis;
 }
@@ -157,7 +321,19 @@ export async function buildPracticePlan(input: {
 }): Promise<PracticePlan> {
   const response = await client.responses.create({
     model,
-    input: `Create a softball practice plan for ${input.ageGroup || "youth softball"}. Total time must be ${input.durationMinutes} minutes. Use these evidence-based priorities from the team's latest game analysis:\n${JSON.stringify(input.priorities)}\nMake the plan practical for multiple coaches and stations. Prioritize the highest-need areas without ignoring warmup/throwing fundamentals.`,
+    input: `
+Create a softball practice plan for ${input.ageGroup || "youth softball"}.
+
+Total practice time must be ${input.durationMinutes} minutes.
+
+Use these evidence-based development priorities from the team's game analysis:
+
+${JSON.stringify(input.priorities)}
+
+Make the plan practical for multiple coaches and stations.
+
+Prioritize the highest-need areas while still including warmup and throwing fundamentals.
+`,
     text: {
       format: {
         type: "json_schema",

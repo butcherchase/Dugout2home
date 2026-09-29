@@ -17,7 +17,7 @@ export async function POST(request: Request) {
 
     if (!(file instanceof File)) {
       return NextResponse.json(
-        { error: "Upload a scorebook image or PDF." },
+        { error: "Upload a scorebook image, PDF, or CSV." },
         { status: 400 }
       );
     }
@@ -25,9 +25,16 @@ export async function POST(request: Request) {
     const isImage = file.type.startsWith("image/");
     const isPdf = file.type === "application/pdf";
 
-    if (!isImage && !isPdf) {
+    const isCsv =
+      file.type === "text/csv" ||
+      file.name.toLowerCase().endsWith(".csv");
+
+    if (!isImage && !isPdf && !isCsv) {
       return NextResponse.json(
-        { error: "Upload a JPG, PNG, or PDF scorebook." },
+        {
+          error:
+            "Upload a JPG, PNG, PDF, or GameChanger CSV file."
+        },
         { status: 400 }
       );
     }
@@ -41,23 +48,36 @@ export async function POST(request: Request) {
 
     const bytes = Buffer.from(await file.arrayBuffer());
 
-    const analysis = isPdf
-      ? await analyzeScorebook({
-          kind: "pdf",
-          data: bytes.toString("base64"),
-          filename: file.name || "scorebook.pdf"
-        })
-      : await analyzeScorebook({
-          kind: "image",
-          data: `data:${file.type};base64,${bytes.toString("base64")}`
-        });
+    let analysis;
+
+    if (isCsv) {
+      analysis = await analyzeScorebook({
+        kind: "csv",
+        data: bytes.toString("utf8"),
+        filename: file.name || "gamechanger.csv"
+      });
+    } else if (isPdf) {
+      analysis = await analyzeScorebook({
+        kind: "pdf",
+        data: bytes.toString("base64"),
+        filename: file.name || "scorebook.pdf"
+      });
+    } else {
+      analysis = await analyzeScorebook({
+        kind: "image",
+        data: `data:${file.type};base64,${bytes.toString("base64")}`
+      });
+    }
 
     return NextResponse.json({ analysis });
   } catch (error) {
     console.error(error);
 
     return NextResponse.json(
-      { error: "Scorebook analysis failed. Try a clearer image or PDF." },
+      {
+        error:
+          "Scorebook analysis failed. Try a clearer image, PDF, or CSV."
+      },
       { status: 500 }
     );
   }
