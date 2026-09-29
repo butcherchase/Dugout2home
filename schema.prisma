@@ -1,0 +1,156 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  OWNER
+  HEAD_COACH
+  ASSISTANT_COACH
+  PARENT
+}
+
+enum EvaluationSource {
+  PRACTICE
+  GAME
+  SCOREBOOK_AI
+  COACH_NOTE
+}
+
+enum DevelopmentArea {
+  HITTING
+  BASERUNNING
+  DEFENSE
+  THROWING
+  PITCHING
+  SITUATIONAL_AWARENESS
+}
+
+model User {
+  id          String       @id @default(cuid())
+  email       String       @unique
+  name        String?
+  memberships TeamMember[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model Team {
+  id          String       @id @default(cuid())
+  name        String
+  ageGroup    String?
+  season      String?
+  members     TeamMember[]
+  players     Player[]
+  games       Game[]
+  practices   Practice[]
+  tournaments Tournament[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model TeamMember {
+  id        String   @id @default(cuid())
+  userId    String
+  teamId    String
+  role      UserRole
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, teamId])
+}
+
+model Player {
+  id          String                 @id @default(cuid())
+  teamId      String
+  firstName   String
+  lastName    String?
+  jersey      String?
+  bats        String?
+  throws      String?
+  positions   String[]
+  active      Boolean                @default(true)
+  team        Team                   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  evaluations PlayerEvaluation[]
+  gameLines   PlayerGameLine[]
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+}
+
+model Tournament {
+  id        String   @id @default(cuid())
+  teamId    String
+  name      String
+  startDate DateTime?
+  endDate   DateTime?
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  games     Game[]
+  createdAt DateTime @default(now())
+}
+
+model Game {
+  id            String           @id @default(cuid())
+  teamId        String
+  tournamentId  String?
+  opponent      String
+  playedAt      DateTime
+  runsFor       Int?
+  runsAgainst   Int?
+  sourceImage   String?
+  aiSummary     Json?
+  team          Team             @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  tournament    Tournament?      @relation(fields: [tournamentId], references: [id], onDelete: SetNull)
+  playerLines   PlayerGameLine[]
+  evaluations   PlayerEvaluation[]
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+}
+
+model PlayerGameLine {
+  id               String  @id @default(cuid())
+  gameId           String
+  playerId         String
+  plateAppearances Int     @default(0)
+  hits             Int     @default(0)
+  walks            Int     @default(0)
+  strikeouts       Int     @default(0)
+  runs             Int     @default(0)
+  rbi              Int     @default(0)
+  notes            Json?
+  game             Game    @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  player           Player  @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@unique([gameId, playerId])
+}
+
+model PlayerEvaluation {
+  id        String           @id @default(cuid())
+  playerId  String
+  gameId    String?
+  source    EvaluationSource
+  area      DevelopmentArea
+  score     Int?
+  note      String?
+  evidence  String?
+  player    Player           @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  game      Game?            @relation(fields: [gameId], references: [id], onDelete: SetNull)
+  createdAt DateTime         @default(now())
+}
+
+model Practice {
+  id              String   @id @default(cuid())
+  teamId          String
+  scheduledAt     DateTime
+  durationMinutes Int
+  title           String
+  focusAreas      String[]
+  plan            Json
+  team            Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
