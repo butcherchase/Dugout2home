@@ -108,7 +108,7 @@ export async function analyzeScorebook(dataUrl: string): Promise<GameAnalysis> {
           type: "input_text",
           text: `You are the Dugout2Home softball scorebook analyst. Analyze this scorebook conservatively. Do not invent unreadable events. Use confidence scores. Extract game events and player summaries, then identify development priorities. Separate what the team excelled at from what should be practiced next. If opponent/date/score cannot be read, use "Unknown" or 0 and reduce confidence.`
         },
-        { type: "input_image", image_url: dataUrl }
+        { type: "input_image", image_url: dataUrl, detail: "auto" }
       ]
     }],
     text: {
