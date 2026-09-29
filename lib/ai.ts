@@ -24,14 +24,8 @@ const analysisSchema = {
     },
     confidence: { type: "number" },
     summary: { type: "string" },
-    excelledAt: {
-      type: "array",
-      items: { type: "string" }
-    },
-    workOn: {
-      type: "array",
-      items: { type: "string" }
-    },
+    excelledAt: { type: "array", items: { type: "string" } },
+    workOn: { type: "array", items: { type: "string" } },
     events: {
       type: "array",
       items: {
@@ -39,10 +33,7 @@ const analysisSchema = {
         additionalProperties: false,
         properties: {
           inning: { type: "integer" },
-          half: {
-            type: "string",
-            enum: ["top", "bottom", "unknown"]
-          },
+          half: { type: "string", enum: ["top", "bottom", "unknown"] },
           player: { type: "string" },
           event: { type: "string" },
           result: { type: "string" },
@@ -71,10 +62,7 @@ const analysisSchema = {
           strikeouts: { type: "integer" },
           runs: { type: "integer" },
           rbi: { type: "integer" },
-          notes: {
-            type: "array",
-            items: { type: "string" }
-          }
+          notes: { type: "array", items: { type: "string" } }
         },
         required: [
           "player",
@@ -105,19 +93,11 @@ const analysisSchema = {
               "situational_awareness"
             ]
           },
-          level: {
-            type: "string",
-            enum: ["high", "medium", "low"]
-          },
+          level: { type: "string", enum: ["high", "medium", "low"] },
           evidence: { type: "string" },
           recommendation: { type: "string" }
         },
-        required: [
-          "area",
-          "level",
-          "evidence",
-          "recommendation"
-        ]
+        required: ["area", "level", "evidence", "recommendation"]
       }
     }
   },
@@ -141,10 +121,7 @@ const practiceSchema = {
   properties: {
     title: { type: "string" },
     durationMinutes: { type: "integer" },
-    focus: {
-      type: "array",
-      items: { type: "string" }
-    },
+    focus: { type: "array", items: { type: "string" } },
     blocks: {
       type: "array",
       items: {
@@ -156,18 +133,10 @@ const practiceSchema = {
           purpose: { type: "string" },
           setup: { type: "string" }
         },
-        required: [
-          "minutes",
-          "title",
-          "purpose",
-          "setup"
-        ]
+        required: ["minutes", "title", "purpose", "setup"]
       }
     },
-    coachNotes: {
-      type: "array",
-      items: { type: "string" }
-    }
+    coachNotes: { type: "array", items: { type: "string" } }
   },
   required: [
     "title",
@@ -179,20 +148,9 @@ const practiceSchema = {
 } as const;
 
 type ScorebookInput =
-  | {
-      kind: "image";
-      data: string;
-    }
-  | {
-      kind: "pdf";
-      data: string;
-      filename: string;
-    }
-  | {
-      kind: "csv";
-      data: string;
-      filename: string;
-    };
+  | { kind: "image"; data: string }
+  | { kind: "pdf"; data: string; filename: string }
+  | { kind: "csv"; data: string; filename: string };
 
 const analyzerPrompt = `
 You are the Dugout2Home softball game analysis engine.
@@ -266,7 +224,7 @@ ${input.data}
             },
             {
               type: "input_file",
-              file_data: input.data,
+              file_data: `data:application/pdf;base64,${input.data}`,
               filename: input.filename
             }
           ]
