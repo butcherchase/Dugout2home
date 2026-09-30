@@ -14,7 +14,8 @@
     "prisma:baseline": "node scripts/baseline.mjs",
     "account:set-password": "tsx scripts/set-password.ts",
     "test:integration": "node tests/integration.mjs",
-    "test:analyzer": "node tests/analyzer.mjs"
+    "test:analyzer": "node tests/analyzer.mjs",
+    "test:saved-games": "node tests/saved-games.cjs"
   },
   "dependencies": {
     "@prisma/client": "^6.0.0",

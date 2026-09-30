@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { coachApiAccess } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import { analyzeScorebook } from "@/lib/ai";
@@ -72,7 +73,7 @@ export async function POST(request: Request) {
       }, access.member.team.name);
     }
 
-    return NextResponse.json({ analysis });
+    return NextResponse.json({ analysis, teamId: access.member.teamId, sourceHash: createHash("sha256").update(bytes).digest("hex") });
   } catch (error) {
     console.error(error);
 

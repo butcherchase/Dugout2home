@@ -71,9 +71,17 @@ Next.js Server Actions provide same-origin checks, and the two AI API routes ind
 
 There is no automated email verification, email password reset, MFA, or invitation email in this phase. Admin approval verifies team membership; it is not proof of email ownership. Session cleanup can periodically delete expired Session rows, and stale RateLimit rows can be removed after their window expires.
 
-## Scope
+## Saved games and tournaments
 
-This phase adds onboarding and authorization. Saving individual analyses, creating tournaments, adding evaluations, and generating a recruiting/development history remain future work. The existing practice and tournament pages are clearly labeled example content. The analyzer still returns results for the current session, as before; this update does not claim those results are saved. The family screen is real database-backed access with an honest empty state, not demo players or invented development scores.
+The dashboard now shows the Scorebook Analyzer feeding Player Development, Practice Planner, and Game & Tournament Recaps. After analysis, review the game details and click **Save game**. Match each scorebook row to a roster player, explicitly create a new player, or skip it. Correct extracted player totals before saving. Only matched/created rows count toward player totals.
+
+Save into an existing tournament, create a tournament during saving, or leave the game standalone. Recaps is now a searchable game log with saved game detail pages and tournament summaries. Existing games can be assigned to another tournament from their detail page. Practice loads the latest saved game by default and can use a selected game or tournament. Player Development includes actual game totals and game-by-game evidence; recruiting/D1 metrics remain a future phase.
+
+The original source file is not stored. The reviewed structured analysis is stored in PostgreSQL. A team-scoped SHA-256 source hash prevents the same file from being saved twice, including simultaneous retries. A different export/photo of the same game is a different file and is not automatically deduplicated. Saving a repeat of the same file opens the original saved record rather than overwriting its stats. Saved-game editing/deletion is not included in this phase; review before saving.
+
+Family access remains limited to approved roster links and explicitly shared evaluation feedback. Saving an analysis does not automatically publish its game notes to parents/players or invent development scores. Generated practice plans are still displayed for the current visit; their source games and priorities remain saved and can regenerate the plan.
+
+Previously analyzed games from before this update were never stored; re-upload those scorebooks and save them once. See GAME-SAVING-UPDATE.md for copy-over instructions.
 
 ## Verification
 
@@ -88,3 +96,7 @@ For end-to-end tests, create a disposable LOCAL PostgreSQL database, migrate it,
 `npm run test:analyzer` uses the same disposable DATABASE_URL, starts a separate local app on port 3102 and a mock AI service on 3101, and verifies all upload branches without calling OpenAI. Ports 3101–3102 must be free.
 
 See VALIDATION.md for the checks completed for this handoff. Live Railway deployment and real AI extraction accuracy were not tested.
+
+## Saved-game verification
+
+With DATABASE_URL set to a migrated disposable local PostgreSQL database, run `npm run test:saved-games`. It exercises the real route handlers, server pages, authorization queries, and database transactions. Only Next request-context helpers (cookies and cache invalidation) and the AI provider are mocked. It also temporarily creates a database trigger to verify transaction rollback; run this only on an isolated test database, without concurrent test suites. The script removes its test accounts/teams and trigger. A live app server is not required.

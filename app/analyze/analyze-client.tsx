@@ -1,9 +1,13 @@
 "use client";
 
+import SaveGame, { type RosterOption, type TournamentOption } from "./save-game";
 import { useState } from "react";
 import type { GameAnalysis, PracticePlan } from "@/types";
 
-export default function AnalyzeClient({ teamName }: { teamName: string }) {
+export default function AnalyzeClient({ teamName, teamId, roster, tournaments }: { teamName: string; teamId: string; roster: RosterOption[]; tournaments: TournamentOption[] }) {
+  const [sourceHash, setSourceHash] = useState("");
+  const [analysisTeamId, setAnalysisTeamId] = useState(teamId);
+  const [analysisVersion, setAnalysisVersion] = useState(0);
   const [file, setFile] = useState<File | null>(null);
   const [analysis, setAnalysis] = useState<GameAnalysis | null>(null);
   const [plan, setPlan] = useState<PracticePlan | null>(null);
@@ -13,57 +17,27 @@ export default function AnalyzeClient({ teamName }: { teamName: string }) {
 
   async function analyze() {
     if (!file) return;
-
-    setLoading(true);
-    setError("");
-    setPlan(null);
-
-    const form = new FormData();
-    form.append("scorebook", file);
-
-    const res = await fetch("/api/analyze", {
-      method: "POST",
-      body: form
-    });
-
-    const body = await res.json();
-
-    if (!res.ok) {
-      setError(body.error || "Analysis failed");
-    } else {
-      setAnalysis(body.analysis);
-    }
-
-    setLoading(false);
+    setLoading(true); setError(""); setPlan(null); setAnalysis(null); setSourceHash("");
+    try {
+      const form = new FormData(); form.append("scorebook", file);
+      const response = await fetch("/api/analyze", { method: "POST", body: form });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error || "Analysis failed");
+      if (body.teamId !== teamId) throw new Error("Your active team changed. Refresh this page before analyzing again.");
+      setAnalysis(body.analysis); setSourceHash(body.sourceHash); setAnalysisTeamId(body.teamId); setAnalysisVersion(v => v + 1);
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not connect. Please try again."); }
+    finally { setLoading(false); }
   }
-
   async function buildPlan() {
     if (!analysis) return;
-
-    setPlanLoading(true);
-    setError("");
-
-    const res = await fetch("/api/practice-plan", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        priorities: analysis.priorities,
-        durationMinutes: 75,
-
-      })
-    });
-
-    const body = await res.json();
-
-    if (!res.ok) {
-      setError(body.error || "Plan failed");
-    } else {
+    setPlanLoading(true); setError("");
+    try {
+      const response = await fetch("/api/practice-plan", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ priorities: analysis.priorities, durationMinutes: 75, teamId: analysisTeamId }) });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error || "Plan failed");
       setPlan(body.plan);
-    }
-
-    setPlanLoading(false);
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not connect. Please try again."); }
+    finally { setPlanLoading(false); }
   }
 
   return (
@@ -107,6 +81,7 @@ export default function AnalyzeClient({ teamName }: { teamName: string }) {
         {error && <p className="error">{error}</p>}
       </div>
 
+      {analysis && sourceHash && <SaveGame key={analysisVersion} analysis={analysis} sourceHash={sourceHash} teamId={analysisTeamId} roster={roster} tournaments={tournaments} />}
       {analysis && (
         <>
           <section className="score-strip">

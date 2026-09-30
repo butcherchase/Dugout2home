@@ -4,6 +4,7 @@ import { z } from "zod";
 import { buildPracticePlan } from "@/lib/ai";
 
 const requestSchema = z.object({
+  teamId: z.string().optional(),
   priorities: z.array(z.object({
     area: z.enum(["hitting", "baserunning", "defense", "throwing", "pitching", "situational_awareness"]),
     level: z.enum(["high", "medium", "low"]),
@@ -23,6 +24,7 @@ export async function POST(request: Request) {
     }
 
     const input = requestSchema.parse(await request.json());
+    if (input.teamId && input.teamId !== access.member.teamId) return NextResponse.json({ error: "Your active team changed. Refresh this page before generating a plan." }, { status: 409 });
     const plan = await buildPracticePlan({ ...input, ageGroup: access.member.team.ageGroup ?? undefined });
     return NextResponse.json({ plan });
   } catch (error) {

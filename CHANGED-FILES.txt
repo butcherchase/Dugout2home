@@ -1,0 +1,26 @@
+Complete new/replacement files, relative to repository root:
+
+app/analyze/analyze-client.tsx
+app/analyze/page.tsx
+app/analyze/save-game.tsx
+app/api/analyze/route.ts
+app/api/games/route.ts
+app/api/practice-plan/route.ts
+app/dashboard/page.tsx
+app/globals.css
+app/players/page.tsx
+app/practice/generate-plan.tsx
+app/practice/page.tsx
+app/recaps/actions.ts
+app/recaps/game-list.tsx
+app/recaps/games/[id]/page.tsx
+app/recaps/page.tsx
+app/recaps/priority-list.tsx
+app/recaps/tournaments/[id]/page.tsx
+GAME-SAVING-UPDATE.md
+lib/game-data.ts
+package.json
+prisma/migrations/202609300001_saved_games/migration.sql
+prisma/schema.prisma
+README.md
+tests/saved-games.cjs

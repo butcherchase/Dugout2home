@@ -112,6 +112,7 @@ model Game {
   id            String           @id @default(cuid())
   teamId        String
   tournamentId  String?
+  sourceHash    String?
   opponent      String
   playedAt      DateTime
   runsFor       Int?
@@ -124,6 +125,8 @@ model Game {
   evaluations   PlayerEvaluation[]
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
+  @@unique([teamId, sourceHash])
+  @@index([teamId, playedAt])
 }
 
 model PlayerGameLine {
