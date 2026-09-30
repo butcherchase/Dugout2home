@@ -24,6 +24,7 @@ export type PlayerGameSummary = {
   runs: number;
   rbi: number;
   notes: string[];
+  details?: import("@/lib/player-details").PlayerDetails;
 };
 
 export type DevelopmentPriority = {

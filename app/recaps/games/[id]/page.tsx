@@ -1,9 +1,10 @@
+import ShareRecap from "@/app/recaps/share-recap";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireCoach } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { gameDateLabel, readAnalysis, statKeys, statLabels } from "@/lib/game-data";
-import { assignTournament } from "@/app/recaps/actions";
+import { assignTournament, assignSeason } from "@/app/recaps/actions";
 import { Submit } from "@/app/components/submit";
 
 export default async function GamePage({ params }: { params: Promise<{ id: string }> }) {
@@ -12,11 +13,14 @@ export default async function GamePage({ params }: { params: Promise<{ id: strin
   const game = await db.game.findFirst({ where: { id, teamId: member.teamId }, include: { tournament: true, playerLines: { where: { player: { teamId: member.teamId } }, include: { player: true } } } });
   if (!game) notFound();
   const tournaments = await db.tournament.findMany({ where: { teamId: member.teamId }, orderBy: { createdAt: "desc" } });
+  const seasons = await db.season.findMany({ where: { teamId: member.teamId }, orderBy: { createdAt: "desc" } });
   const analysis = readAnalysis(game.aiSummary);
   return <div className="shell page game-details"><Link href="/recaps" className="breadcrumb">← All games and tournaments</Link><span className="eyebrow">{member.team.name} · SAVED GAME</span><h1>vs. {game.opponent}</h1><p className="lede">{gameDateLabel(game.playedAt)} · {game.runsFor ?? "—"}–{game.runsAgainst ?? "—"}</p>
     {game.tournament && <p>Tournament: <Link href={`/recaps/tournaments/${game.tournament.id}`}>{game.tournament.name}</Link></p>}
+    <ShareRecap teamName={member.team.name} logoData={member.team.logoData} title={`vs. ${game.opponent}`} score={`${game.runsFor ?? "—"}–${game.runsAgainst ?? "—"}`} initialCaption={`${member.team.name} vs. ${game.opponent} | ${gameDateLabel(game.playedAt)}\nFinal score: ${game.runsFor ?? "—"}–${game.runsAgainst ?? "—"}.\nGrowing together, one game at a time. #Dugout2Home`} />
     <div className="actions"><Link className="button primary" href={`/practice?gameId=${game.id}`}>Build practice from this game</Link><Link className="button secondary" href="/players">View player totals</Link></div>
-    <form action={assignTournament} className="panel form-stack inline-select"><input type="hidden" name="gameId" value={game.id} /><label>Assign tournament<select name="tournamentId" defaultValue={game.tournamentId ?? ""}><option value="">Standalone game</option>{tournaments.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</select></label><Submit>Update tournament</Submit></form>
+    <form action={assignTournament} className="panel form-stack inline-select"><input type="hidden" name="teamId" value={member.teamId} /><input type="hidden" name="gameId" value={game.id} /><label>Assign tournament<select name="tournamentId" defaultValue={game.tournamentId ?? ""}><option value="">Standalone game</option>{tournaments.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</select></label><Submit>Update tournament</Submit></form>
+    {!game.tournamentId && <form action={assignSeason} className="panel form-stack"><input type="hidden" name="teamId" value={member.teamId} /><input type="hidden" name="gameId" value={game.id} /><label>Season<select name="seasonId" defaultValue={game.seasonId ?? ""}><option value="">Unassigned season</option>{seasons.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></label><Submit>Update season</Submit></form>}
     <section className="panel"><h2>Game recap</h2><p className="game-notes">{analysis?.summary ?? "No analysis was stored for this game."}</p>{analysis && <small>AI confidence: {Math.round(analysis.confidence * 100)}%. Confirm uncertain observations against the scorebook.</small>}</section>
     {analysis && <><div className="two-col"><section className="panel"><h2>Excelled at</h2><ul>{analysis.excelledAt.map((s, i) => <li key={i}>{s}</li>)}</ul></section><section className="panel"><h2>Work on</h2><ul>{analysis.workOn.map((s, i) => <li key={i}>{s}</li>)}</ul></section></div>
       <section className="panel"><h2>Practice priorities</h2>{!analysis.priorities.length && <p>No practice priorities were extracted.</p>}{analysis.priorities.map((p, i) => <article className="membership" key={i}><span className={`pill ${p.level}`}>{p.level}</span><h3>{p.area.replaceAll("_", " ")}</h3><p>{p.recommendation}</p><small>{p.evidence}</small></article>)}</section></>}

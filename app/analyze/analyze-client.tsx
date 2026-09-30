@@ -4,7 +4,7 @@ import SaveGame, { type RosterOption, type TournamentOption } from "./save-game"
 import { useState } from "react";
 import type { GameAnalysis, PracticePlan } from "@/types";
 
-export default function AnalyzeClient({ teamName, teamId, roster, tournaments }: { teamName: string; teamId: string; roster: RosterOption[]; tournaments: TournamentOption[] }) {
+export default function AnalyzeClient({ teamName, teamId, roster, tournaments, seasons }: { teamName: string; teamId: string; roster: RosterOption[]; tournaments: TournamentOption[]; seasons: { id: string; name: string }[] }) {
   const [sourceHash, setSourceHash] = useState("");
   const [analysisTeamId, setAnalysisTeamId] = useState(teamId);
   const [analysisVersion, setAnalysisVersion] = useState(0);
@@ -81,7 +81,7 @@ export default function AnalyzeClient({ teamName, teamId, roster, tournaments }:
         {error && <p className="error">{error}</p>}
       </div>
 
-      {analysis && sourceHash && <SaveGame key={analysisVersion} analysis={analysis} sourceHash={sourceHash} teamId={analysisTeamId} roster={roster} tournaments={tournaments} />}
+      {analysis && sourceHash && <SaveGame key={analysisVersion} analysis={analysis} sourceHash={sourceHash} teamId={analysisTeamId} roster={roster} tournaments={tournaments} seasons={seasons} />}
       {analysis && (
         <>
           <section className="score-strip">

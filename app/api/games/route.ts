@@ -32,15 +32,22 @@ export async function POST(request: Request) {
       if (new Set(newNames).size !== newNames.length || newNames.some(name => roster.some(p => normalizeName(`${p.firstName} ${p.lastName ?? ""}`) === name))) {
         throw new InputError("A new player name already exists. Match it to the existing roster player instead, or ask your admin to reactivate that player.");
       }
+      let seasonId: string | null = input.seasonId || null;
+      if (seasonId && !await tx.season.findFirst({ where: { id: seasonId, teamId } })) throw new InputError("Season not found on this team.");
       let tournamentId: string | null = input.tournamentId || null;
-      if (tournamentId && !await tx.tournament.findFirst({ where: { id: tournamentId, teamId } })) throw new InputError("Tournament not found on this team.");
+      if (tournamentId) {
+        const tournament = await tx.tournament.findFirst({ where: { id: tournamentId, teamId } });
+        if (!tournament) throw new InputError("Tournament not found on this team.");
+        if (seasonId && seasonId !== tournament.seasonId) throw new InputError("Select the tournament’s season, or move the tournament to that season first.");
+        seasonId = tournament.seasonId;
+      }
       if (input.newTournamentName) {
-        const tournament = await tx.tournament.findFirst({ where: { teamId, name: { equals: input.newTournamentName, mode: "insensitive" } } })
-          ?? await tx.tournament.create({ data: { teamId, name: input.newTournamentName } });
+        const tournament = await tx.tournament.findFirst({ where: { teamId, seasonId, name: { equals: input.newTournamentName, mode: "insensitive" } } })
+          ?? await tx.tournament.create({ data: { teamId, seasonId, name: input.newTournamentName } });
         tournamentId = tournament.id;
       }
       const analysis = { ...input.analysis, opponent: input.opponent, gameDate: input.gameDate, score: { us: input.runsFor, them: input.runsAgainst } };
-      const game = await tx.game.create({ data: { teamId, sourceHash: input.sourceHash, opponent: input.opponent, playedAt: new Date(`${input.gameDate}T00:00:00Z`), runsFor: input.runsFor, runsAgainst: input.runsAgainst, tournamentId, aiSummary: analysis as Prisma.InputJsonValue } });
+      const game = await tx.game.create({ data: { teamId, seasonId, sourceHash: input.sourceHash, opponent: input.opponent, playedAt: new Date(`${input.gameDate}T00:00:00Z`), runsFor: input.runsFor, runsAgainst: input.runsAgainst, tournamentId, aiSummary: analysis as Prisma.InputJsonValue } });
       for (let i = 0; i < analysis.playerSummaries.length; i++) {
         const target = input.playerTargets[i];
         if (target === "skip") continue;
@@ -50,8 +57,8 @@ export async function POST(request: Request) {
           const [firstName, ...last] = line.player.trim().split(/\s+/);
           playerId = (await tx.player.create({ data: { teamId, firstName, lastName: last.join(" ") || null, positions: [] } })).id;
         }
-        const { player: _name, ...stats } = line;
-        await tx.playerGameLine.create({ data: { gameId: game.id, playerId, ...stats } });
+        const { player: _name, details, ...stats } = line;
+        await tx.playerGameLine.create({ data: { gameId: game.id, playerId, ...stats, details: details ? details as Prisma.InputJsonValue : Prisma.DbNull } });
       }
       return { id: game.id, duplicate: false };
     }, { timeout: 15000 });

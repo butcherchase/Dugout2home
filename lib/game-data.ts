@@ -1,3 +1,4 @@
+import { playerDetailsSchema } from "./player-details";
 import { z } from "zod";
 
 const count = z.number().int().min(0).max(1000);
@@ -9,7 +10,7 @@ export const analysisSchema = z.object({
   score: z.object({ us: count, them: count }), confidence: z.number().min(0).max(1), summary: note,
   excelledAt: z.array(note).max(100), workOn: z.array(note).max(100),
   events: z.array(z.object({ inning: z.number().int().min(0).max(100), half: z.enum(["top", "bottom", "unknown"]), player: z.string().max(150), event: note, result: note, confidence: z.number().min(0).max(1) })).max(2000),
-  playerSummaries: z.array(z.object({ player: z.string().trim().min(1).max(120), plateAppearances: count, hits: count, walks: count, strikeouts: count, runs: count, rbi: count, notes: z.array(note).max(100) })).max(100),
+  playerSummaries: z.array(z.object({ player: z.string().trim().min(1).max(120), plateAppearances: count, hits: count, walks: count, strikeouts: count, runs: count, rbi: count, notes: z.array(note).max(100), details: playerDetailsSchema.optional() })).max(100),
   priorities: z.array(prioritySchema).max(100)
 });
 
@@ -21,6 +22,7 @@ export const dateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(value =
 export const saveGameSchema = z.object({
   teamId: z.string().min(1).max(100), sourceHash: z.string().regex(/^[a-f0-9]{64}$/),
   opponent: z.string().trim().min(1).max(150), gameDate: dateSchema, runsFor: count, runsAgainst: count,
+  seasonId: z.string().max(100).default(""),
   tournamentId: z.string().max(100).default(""), newTournamentName: z.string().trim().max(120).default(""),
   analysis: analysisSchema, playerTargets: z.array(z.string().min(1).max(100)).max(100)
 }).refine(v => v.playerTargets.length === v.analysis.playerSummaries.length, "Choose a roster match or skip for each player.")

@@ -100,3 +100,12 @@ See VALIDATION.md for the checks completed for this handoff. Live Railway deploy
 ## Saved-game verification
 
 With DATABASE_URL set to a migrated disposable local PostgreSQL database, run `npm run test:saved-games`. It exercises the real route handlers, server pages, authorization queries, and database transactions. Only Next request-context helpers (cookies and cache invalidation) and the AI provider are mocked. It also temporarily creates a database trigger to verify transaction rollback; run this only on an isolated test database, without concurrent test suites. The script removes its test accounts/teams and trigger. A live app server is not required.
+
+
+## Seasons, development and sharing update
+
+See TEAM-WORKFLOWS-UPDATE.md for the latest copy-over instructions and usage. Migration 202609300002_team_workflows adds team logos, seasons and optional player-game details without deleting existing data. Recaps now uses collapsible season/tournament/game folders with search and season filtering. Practice accepts multiple games and compares recorded priorities in losses with wins/ties. Players includes hitting/pitching/fielding breakdowns, per-game details, season filtering and coach-reviewed parent email drafts. Saved game and tournament pages offer editable social captions and downloadable/shareable recap images. Team Admins manage the persistent logo.
+
+Email uses mailto drafts and clipboard fallback, with no provider configuration or automatic send. Social posts are completed by the coach outside the app. New analyses extract optional pitching/fielding data conservatively; older saved games retain their original data. Existing duplicate-upload protection remains intact. New data does not automatically publish private player feedback to family accounts.
+
+Validation for this update: production build and TypeScript passed; local migration/schema comparison passed; 97 real database/handler/server-render checks passed. Browser interactions, external mail clients, native sharing and live AI extraction were not validated in this handoff.

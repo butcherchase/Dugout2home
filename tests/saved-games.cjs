@@ -168,6 +168,7 @@ async function run() {
   check(planResponse.status === 200 && practiceCalls.at(-1).ageGroup === '14U', 'practice API uses saved team age group');
   const changedTeam = await practiceApi(new Request(process.env.APP_URL + '/api/practice-plan', { method: 'POST', headers: { origin: process.env.APP_URL, 'content-type': 'application/json' }, body: JSON.stringify({ priorities: analysis.priorities, durationMinutes: 75, teamId: other.id }) }));
   check(changedTeam.status === 409, 'practice API rejects a stale active-team selection');
+  await require('./team-workflows.cjs')({ db, team, other, coach, admin, parent, player, pending, otherCoach, roster, outside, game, input, line, analysis, save, action, renderPage, check, hash, stamp, setToken: token => { cookieToken = token; } });
   await db.teamMember.updateMany({ where: { userId: coach.user.id }, data: { status: 'REJECTED' } });
   check((await save({ ...input, sourceHash: hash('revoked') }, coach.token)).status === 403, 'revoked coach loses save permission on existing session');
   console.log(`ALL ${checks} SAVED-GAME CHECKS PASSED`);

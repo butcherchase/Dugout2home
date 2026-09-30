@@ -53,6 +53,8 @@ model Team {
   name        String
   ageGroup    String?
   season      String?
+  logoData    String?
+  seasons     Season[]
   joinCode    String       @unique @default(uuid())
   members     TeamMember[]
   players     Player[]
@@ -97,10 +99,23 @@ model Player {
   updatedAt   DateTime               @updatedAt
 }
 
+model Season {
+  id String @id @default(cuid())
+  teamId String
+  name String
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  games Game[]
+  tournaments Tournament[]
+  createdAt DateTime @default(now())
+  @@unique([teamId, name])
+}
+
 model Tournament {
   id        String   @id @default(cuid())
   teamId    String
   name      String
+  seasonId String?
+  season Season? @relation(fields: [seasonId], references: [id], onDelete: SetNull)
   startDate DateTime?
   endDate   DateTime?
   team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
@@ -112,6 +127,8 @@ model Game {
   id            String           @id @default(cuid())
   teamId        String
   tournamentId  String?
+  seasonId      String?
+  season        Season? @relation(fields: [seasonId], references: [id], onDelete: SetNull)
   sourceHash    String?
   opponent      String
   playedAt      DateTime
@@ -139,6 +156,7 @@ model PlayerGameLine {
   strikeouts       Int     @default(0)
   runs             Int     @default(0)
   rbi              Int     @default(0)
+  details          Json?
   notes            Json?
   game             Game    @relation(fields: [gameId], references: [id], onDelete: Cascade)
   player           Player  @relation(fields: [playerId], references: [id], onDelete: Cascade)
