@@ -1,6 +1,7 @@
 // Runs from saved-games.cjs against a disposable local PostgreSQL database.
 module.exports = async function (t) {
   const { db, team, other, coach, admin, parent, player, pending, otherCoach, roster, outside, game, input, line, analysis, save, action, renderPage, check, hash, stamp, setToken } = t;
+  await require('./under13-disclosure.cjs')(t);
   const { createSeason, assignSeason, assignTournament, createTournament } = require('../app/recaps/actions.ts');
   const { metricTotal, readDetails } = require('../lib/player-details.ts');
   const { lossPatterns } = require('../lib/game-trends.ts');

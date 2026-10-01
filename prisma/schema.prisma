@@ -53,6 +53,9 @@ model Team {
   name        String
   ageGroup    String?
   season      String?
+  containsUnder13Data Boolean?
+  under13DisclosureUpdatedAt DateTime?
+  under13DisclosureUpdatedBy String?
   logoData    String?
   seasons     Season[]
   joinCode    String       @unique @default(uuid())

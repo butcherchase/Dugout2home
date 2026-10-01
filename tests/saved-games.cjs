@@ -19,6 +19,7 @@ Module._resolveFilename = function (name, ...args) { return originalResolve.call
 Module._load = function (name, ...args) {
   if (name === 'server-only') return {};
   if (name === 'next/headers') return { cookies: async () => ({ get: () => cookieToken ? { value: cookieToken } : undefined }) };
+  if (name === 'next/navigation') return { ...originalLoad.call(this, name, ...args), useRouter: () => ({ refresh() {} }) };
   if (name === 'next/cache') return { revalidatePath() {} };
   if (name === '@/lib/ai') return {
     analyzeScorebook: async (input, team) => { aiCalls.push({ input, team }); return aiFixture; },

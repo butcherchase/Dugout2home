@@ -1,3 +1,4 @@
+import Under13Disclosure from "./under13-disclosure";
 import Link from "next/link";
 import LogoUpload from "./logo-upload";
 import { requireAdmin } from "@/lib/auth";
@@ -16,6 +17,7 @@ export default async function TeamPage({ searchParams }: { searchParams: Promise
   const pending = members.filter(m => m.status === "PENDING");
   const { message } = await searchParams;
   return <div className="shell page"><span className="eyebrow">TEAM ADMIN</span><h1>{admin.team.name}</h1><FormMessage code={message} />
+    <Under13Disclosure key={admin.teamId} teamId={admin.teamId} initialValue={admin.team.containsUnder13Data} updatedAt={admin.team.under13DisclosureUpdatedAt?.toISOString() ?? null} />
     <LogoUpload teamId={admin.teamId} currentLogo={admin.team.logoData} />
     <section className="panel"><h2>Build your roster from a scorebook</h2><p>Upload your first game, mark extracted players for roster creation, and review their names before saving.</p><Link className="button secondary" href="/analyze">Upload scorebook to build roster</Link></section>
     <section className="panel"><h2>Invite your team</h2><p>Share this code with coaches, parents, and players. A code allows requests; you still approve each person.</p>
