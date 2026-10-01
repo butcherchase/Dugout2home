@@ -1,4 +1,5 @@
 import RefreshDevelopment from "./refresh-development";
+import SeasonStatistics from "./season-statistics";
 import { readDetails, pitchingLabels, fieldingLabels } from "@/lib/player-details";
 import TeamBreakdown from "./team-breakdown";
 import { gameDateLabel, statKeys, statLabels, totalStats } from "@/lib/game-data";
@@ -16,6 +17,9 @@ export default async function PlayersPage({ searchParams }: { searchParams?: Pro
   const savedGames = [...new Map(players.flatMap(p => p.gameLines.map(l => [l.game.id, { id: l.game.id, label: `${gameDateLabel(l.game.playedAt)} vs. ${l.game.opponent}` }] as const))).values()].sort((a, b) => b.label.localeCompare(a.label));
   return <div className="shell page"><span className="eyebrow">{member.team.name}</span><h1>Player Development</h1><p className="lede">Saved game results and coach evaluations. Player totals include only the scorebook rows you matched when saving. Feedback stays private until a coach shares it.</p>
     <form action="/players" className="panel form-stack filter-form"><label>Season<select name="seasonId" defaultValue={seasonId ?? ""}><option value="">All seasons</option><option value="unassigned">Unassigned season</option>{seasons.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></label><button className="button secondary">Show player results</button></form>
+    <Link className="button secondary" href="/players/import">Import GameChanger season CSV</Link>
+    <SeasonStatistics seasons={seasons.filter(s => !seasonId || s.id === seasonId)} />
+    <h2>Saved-game development</h2>
     <TeamBreakdown players={players} />
     {savedGames.length > 0 && <RefreshDevelopment key={member.teamId + (seasonId ?? "all")} teamId={member.teamId} games={savedGames} />}
     <Link className="button secondary" href="/analyze">Build or add to roster from a scorebook</Link>

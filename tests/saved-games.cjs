@@ -176,6 +176,7 @@ async function run() {
   await require('./team-workflows.cjs')(testContext);
   await require('./development-recovery.cjs')({ ...testContext, setRecoveryFixture: value => { recoveryFixture = value; }, recoveryCalls });
   await require('./game-removal.cjs')({ ...testContext, aiCalls });
+  await require('./season-csv.cjs')(testContext);
   await db.teamMember.updateMany({ where: { userId: coach.user.id }, data: { status: 'REJECTED' } });
   check((await save({ ...input, sourceHash: hash('revoked') }, coach.token)).status === 403, 'revoked coach loses save permission on existing session');
   console.log(`ALL ${checks} SAVED-GAME CHECKS PASSED`);

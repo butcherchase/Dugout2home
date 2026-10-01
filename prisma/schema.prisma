@@ -104,6 +104,7 @@ model Player {
 
 model Season {
   id String @id @default(cuid())
+  csvSnapshot Json?
   teamId String
   name String
   team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
