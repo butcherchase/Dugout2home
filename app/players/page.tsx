@@ -1,3 +1,4 @@
+import RefreshDevelopment from "./refresh-development";
 import { readDetails, pitchingLabels, fieldingLabels } from "@/lib/player-details";
 import TeamBreakdown from "./team-breakdown";
 import { gameDateLabel, statKeys, statLabels, totalStats } from "@/lib/game-data";
@@ -12,9 +13,11 @@ export default async function PlayersPage({ searchParams }: { searchParams?: Pro
   const { seasonId } = await (searchParams ?? Promise.resolve({} as { seasonId?: string }));
   const seasons = await db.season.findMany({ where: { teamId: member.teamId }, orderBy: { createdAt: "desc" } });
   const players = await db.player.findMany({ where: { teamId: member.teamId, active: true }, include: { gameLines: { where: { game: { teamId: member.teamId, ...(seasonId ? { seasonId: seasonId === "unassigned" ? null : seasonId } : {}) } }, include: { game: { select: { id: true, opponent: true, playedAt: true } } }, orderBy: { game: { playedAt: "desc" } } }, evaluations: { orderBy: { createdAt: "desc" } } }, orderBy: { firstName: "asc" } });
+  const savedGames = [...new Map(players.flatMap(p => p.gameLines.map(l => [l.game.id, { id: l.game.id, label: `${gameDateLabel(l.game.playedAt)} vs. ${l.game.opponent}` }] as const))).values()].sort((a, b) => b.label.localeCompare(a.label));
   return <div className="shell page"><span className="eyebrow">{member.team.name}</span><h1>Player Development</h1><p className="lede">Saved game results and coach evaluations. Player totals include only the scorebook rows you matched when saving. Feedback stays private until a coach shares it.</p>
     <form action="/players" className="panel form-stack filter-form"><label>Season<select name="seasonId" defaultValue={seasonId ?? ""}><option value="">All seasons</option><option value="unassigned">Unassigned season</option>{seasons.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></label><button className="button secondary">Show player results</button></form>
     <TeamBreakdown players={players} />
+    {savedGames.length > 0 && <RefreshDevelopment key={member.teamId + (seasonId ?? "all")} teamId={member.teamId} games={savedGames} />}
     <Link className="button secondary" href="/analyze">Build or add to roster from a scorebook</Link>
     {member.role === "TEAM_ADMIN" && <Link href="/team">Manage roster and family connections</Link>}
     {!players.length && <section className="panel"><p>No roster players yet. Upload a scorebook to create your initial roster, or ask your team admin to add players manually.</p></section>}

@@ -13,6 +13,8 @@ if (!process.env.DATABASE_URL || !['localhost', '127.0.0.1'].includes(new URL(pr
 process.env.APP_URL = 'http://localhost:3100';
 let cookieToken = '';
 let aiFixture;
+let recoveryFixture;
+const recoveryCalls = [];
 const aiCalls = [], practiceCalls = [];
 const originalLoad = Module._load, originalResolve = Module._resolveFilename;
 Module._resolveFilename = function (name, ...args) { return originalResolve.call(this, name.startsWith('@/') ? path.join(root, name.slice(2)) : name, ...args); };
@@ -21,6 +23,7 @@ Module._load = function (name, ...args) {
   if (name === 'next/headers') return { cookies: async () => ({ get: () => cookieToken ? { value: cookieToken } : undefined }) };
   if (name === 'next/navigation') return { ...originalLoad.call(this, name, ...args), useRouter: () => ({ refresh() {} }) };
   if (name === 'next/cache') return { revalidatePath() {} };
+  if (name === '@/lib/recover-development') return { recoverDevelopment: async (evidence, ids) => { recoveryCalls.push({ evidence, ids }); if (recoveryFixture instanceof Error) throw recoveryFixture; return recoveryFixture; } };
   if (name === '@/lib/ai') return {
     analyzeScorebook: async (input, team) => { aiCalls.push({ input, team }); return aiFixture; },
     buildPracticePlan: async input => { practiceCalls.push(input); return { title: 'Mock practice', durationMinutes: input.durationMinutes, focus: [], blocks: [], coachNotes: [] }; }
@@ -169,7 +172,9 @@ async function run() {
   check(planResponse.status === 200 && practiceCalls.at(-1).ageGroup === '14U', 'practice API uses saved team age group');
   const changedTeam = await practiceApi(new Request(process.env.APP_URL + '/api/practice-plan', { method: 'POST', headers: { origin: process.env.APP_URL, 'content-type': 'application/json' }, body: JSON.stringify({ priorities: analysis.priorities, durationMinutes: 75, teamId: other.id }) }));
   check(changedTeam.status === 409, 'practice API rejects a stale active-team selection');
-  await require('./team-workflows.cjs')({ db, team, other, coach, admin, parent, player, pending, otherCoach, roster, outside, game, input, line, analysis, save, action, renderPage, check, hash, stamp, setToken: token => { cookieToken = token; } });
+  const testContext = { db, team, other, coach, admin, parent, player, pending, otherCoach, roster, outside, game, input, line, analysis, save, action, renderPage, check, hash, stamp, setToken: token => { cookieToken = token; } };
+  await require('./team-workflows.cjs')(testContext);
+  await require('./development-recovery.cjs')({ ...testContext, setRecoveryFixture: value => { recoveryFixture = value; }, recoveryCalls });
   await db.teamMember.updateMany({ where: { userId: coach.user.id }, data: { status: 'REJECTED' } });
   check((await save({ ...input, sourceHash: hash('revoked') }, coach.token)).status === 403, 'revoked coach loses save permission on existing session');
   console.log(`ALL ${checks} SAVED-GAME CHECKS PASSED`);
