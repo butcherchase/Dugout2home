@@ -158,7 +158,7 @@ export async function rotateCode() {
 export async function shareEvaluation(form: FormData) {
   const member = await requireCoach();
   await db.playerEvaluation.updateMany({
-    where: { id: text(form, "evaluationId"), player: { teamId: member.teamId } },
+    where: { id: text(form, "evaluationId"), player: { teamId: member.teamId }, OR: [{ gameId: null }, { game: { removedAt: null } }] },
     data: { sharedWithFamily: text(form, "shared") === "true" }
   });
   revalidatePath("/players");

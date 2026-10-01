@@ -132,6 +132,8 @@ model Game {
   tournamentId  String?
   seasonId      String?
   season        Season? @relation(fields: [seasonId], references: [id], onDelete: SetNull)
+  removedAt     DateTime?
+  removedBy     String?
   sourceHash    String?
   opponent      String
   playedAt      DateTime

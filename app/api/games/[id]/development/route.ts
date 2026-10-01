@@ -32,7 +32,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
 
   try {
     if (input.action === "preview") {
-      const game = await db.game.findFirst({ where: { id, teamId }, include });
+      const game = await db.game.findFirst({ where: { id, teamId, removedAt: null }, include });
       if (!game) return error("Game not found on this team.", 404);
       if (!game.playerLines.length || game.playerLines.length > 100) return error("This game needs 1–100 matched roster players before development can be refreshed.", 400);
       if (game.playerLines.some(l => l.player.teamId !== teamId)) return error("A roster match needs review before continuing.", 400);
@@ -56,7 +56,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
 
     const result = await db.$transaction(async tx => {
       await tx.$queryRaw`SELECT "id" FROM "Team" WHERE "id" = ${teamId} FOR UPDATE`;
-      const game = await tx.game.findFirst({ where: { id, teamId }, include });
+      const game = await tx.game.findFirst({ where: { id, teamId, removedAt: null }, include });
       if (!game) return { status: 404, message: "Game not found on this team." };
       if (revisionFor(game) !== input.revision) return { status: 409, message: "This game changed after the preview. Generate a fresh preview before saving." };
       const ids = game.playerLines.map(l => l.playerId);

@@ -12,7 +12,7 @@ import { PriorityList } from "@/app/recaps/priority-list";
 export default async function TournamentPage({ params }: { params: Promise<{ id: string }> }) {
   const member = await requireCoach();
   const { id } = await params;
-  const tournament = await db.tournament.findFirst({ where: { id, teamId: member.teamId }, include: { games: { where: { teamId: member.teamId }, orderBy: [{ playedAt: "desc" }, { createdAt: "desc" }], include: { tournament: { select: { name: true } }, playerLines: { where: { player: { teamId: member.teamId } }, include: { player: true } } } } } });
+  const tournament = await db.tournament.findFirst({ where: { id, teamId: member.teamId }, include: { games: { where: { teamId: member.teamId, removedAt: null }, orderBy: [{ playedAt: "desc" }, { createdAt: "desc" }], include: { tournament: { select: { name: true } }, playerLines: { where: { player: { teamId: member.teamId } }, include: { player: true } } } } } });
   if (!tournament) notFound();
   const seasons = await db.season.findMany({ where: { teamId: member.teamId }, orderBy: { createdAt: "desc" } });
   const games = tournament.games;

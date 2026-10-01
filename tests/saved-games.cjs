@@ -162,7 +162,7 @@ async function run() {
   const practiceApi = require('../app/api/practice-plan/route.ts').POST;
   cookieToken = admin.token;
   for (const [name, type, data, kind] of [['test.csv', 'text/csv', 'name,hits\nPlayer,2', 'csv'], ['test.pdf', 'application/pdf', '%PDF-test', 'pdf'], ['test.png', 'image/png', 'test-png', 'image']]) {
-    const form = new FormData(); form.set('scorebook', new Blob([data], { type }), name);
+    const form = new FormData(); form.set('scorebook', new Blob([data], { type }), name); form.set('csvScope', 'single_game');
     const response = await analyze(new Request(process.env.APP_URL + '/api/analyze', { method: 'POST', headers: { origin: process.env.APP_URL }, body: form }));
     const body = await response.json();
     check(response.status === 200 && body.sourceHash === hash(data) && body.teamId === team.id, `${kind} upload returns stable file identity and correct team`);
@@ -175,6 +175,7 @@ async function run() {
   const testContext = { db, team, other, coach, admin, parent, player, pending, otherCoach, roster, outside, game, input, line, analysis, save, action, renderPage, check, hash, stamp, setToken: token => { cookieToken = token; } };
   await require('./team-workflows.cjs')(testContext);
   await require('./development-recovery.cjs')({ ...testContext, setRecoveryFixture: value => { recoveryFixture = value; }, recoveryCalls });
+  await require('./game-removal.cjs')({ ...testContext, aiCalls });
   await db.teamMember.updateMany({ where: { userId: coach.user.id }, data: { status: 'REJECTED' } });
   check((await save({ ...input, sourceHash: hash('revoked') }, coach.token)).status === 403, 'revoked coach loses save permission on existing session');
   console.log(`ALL ${checks} SAVED-GAME CHECKS PASSED`);

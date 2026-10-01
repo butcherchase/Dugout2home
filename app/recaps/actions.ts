@@ -42,7 +42,7 @@ export async function assignTournament(form: FormData) {
   const tournamentId = String(form.get("tournamentId") ?? "") || null;
   const ok = await db.$transaction(async tx => {
     await tx.$queryRaw`SELECT "id" FROM "Team" WHERE "id" = ${member.teamId} FOR UPDATE`;
-    const game = await tx.game.findFirst({ where: { id: gameId, teamId: member.teamId } });
+    const game = await tx.game.findFirst({ where: { id: gameId, teamId: member.teamId, removedAt: null } });
     if (!game) return false;
     const tournament = tournamentId ? await tx.tournament.findFirst({ where: { id: tournamentId, teamId: member.teamId } }) : null;
     if (tournamentId && !tournament) return false;
@@ -67,7 +67,7 @@ export async function assignSeason(form: FormData) {
       await tx.tournament.update({ where: { id: tournamentId }, data: { seasonId } });
       await tx.game.updateMany({ where: { teamId: member.teamId, tournamentId }, data: { seasonId } });
     } else if (gameId) {
-      const changed = await tx.game.updateMany({ where: { id: gameId, teamId: member.teamId, tournamentId: null }, data: { seasonId } });
+      const changed = await tx.game.updateMany({ where: { id: gameId, teamId: member.teamId, removedAt: null, tournamentId: null }, data: { seasonId } });
       if (!changed.count) return false;
     } else return false;
     return true;

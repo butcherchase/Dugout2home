@@ -5,6 +5,7 @@ import { useState } from "react";
 import type { GameAnalysis, PracticePlan } from "@/types";
 
 export default function AnalyzeClient({ teamName, teamId, roster, tournaments, seasons }: { teamName: string; teamId: string; roster: RosterOption[]; tournaments: TournamentOption[]; seasons: { id: string; name: string }[] }) {
+  const [csvScope, setCsvScope] = useState("");
   const [sourceHash, setSourceHash] = useState("");
   const [analysisTeamId, setAnalysisTeamId] = useState(teamId);
   const [analysisVersion, setAnalysisVersion] = useState(0);
@@ -19,7 +20,7 @@ export default function AnalyzeClient({ teamName, teamId, roster, tournaments, s
     if (!file) return;
     setLoading(true); setError(""); setPlan(null); setAnalysis(null); setSourceHash("");
     try {
-      const form = new FormData(); form.append("scorebook", file);
+      const form = new FormData(); form.append("scorebook", file); form.append("csvScope", csvScope);
       const response = await fetch("/api/analyze", { method: "POST", body: form });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || "Analysis failed");
@@ -57,12 +58,13 @@ export default function AnalyzeClient({ teamName, teamId, roster, tournaments, s
         <input
           type="file"
           accept="image/*,application/pdf,text/csv,.csv"
-          onChange={(e) => setFile(e.target.files?.[0] || null)}
+          onChange={(e) => { setFile(e.target.files?.[0] || null); setCsvScope(""); }}
         />
 
+        {file && (file.type === "text/csv" || file.name.toLowerCase().endsWith(".csv")) && <div className="form-stack"><label>This CSV contains<select value={csvScope} onChange={e => setCsvScope(e.target.value)}><option value="">Choose the data coverage…</option><option value="single_game">Only this one game</option><option value="cumulative">Cumulative season or tournament totals</option><option value="unknown">I am not sure</option></select></label>{csvScope !== "single_game" && <p>Cumulative totals include earlier games. Do not save them as another game. Use a scorebook for this game, or export only this game’s stats.</p>}</div>}
         <button
           className="button primary"
-          disabled={!file || loading}
+          disabled={!file || loading || ((file.type === "text/csv" || file.name.toLowerCase().endsWith(".csv")) && csvScope !== "single_game")}
           onClick={analyze}
         >
           {loading ? "Analyzing…" : "Analyze game"}

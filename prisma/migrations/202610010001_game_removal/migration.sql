@@ -1,0 +1,1 @@
+ALTER TABLE "Game" ADD COLUMN "removedAt" TIMESTAMP(3), ADD COLUMN "removedBy" TEXT;

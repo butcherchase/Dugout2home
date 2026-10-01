@@ -26,7 +26,7 @@ export default function SaveGame({ analysis, sourceHash, teamId, roster, tournam
   }));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const [saved, setSaved] = useState<{ id: string; duplicate: boolean } | null>(null);
+  const [saved, setSaved] = useState<{ id: string; duplicate: boolean; removed?: boolean } | null>(null);
 
   async function save(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault(); setSaving(true); setError("");
@@ -42,6 +42,7 @@ export default function SaveGame({ analysis, sourceHash, teamId, roster, tournam
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not connect. Please try again."); }
     finally { setSaving(false); }
   }
+  if (saved?.removed) return <section className="panel"><h2>This file belongs to a removed game</h2><p>It has not been added back to your totals. Open the removed game to restore it if appropriate.</p><Link className="button secondary" href={`/recaps/games/${saved.id}`}>Review removed game</Link></section>;
   if (saved) return <section className="panel saved-game" role="status"><span className="eyebrow">{saved.duplicate ? "ALREADY IN YOUR GAME LOG" : "GAME SAVED"}</span><h2>{saved.duplicate ? "This scorebook was saved earlier" : "Your game is now part of the story"}</h2>
     <p>{saved.duplicate ? "We kept the original saved game and did not add its stats twice." : "Matched player results are now included in Player Development. This game is available in Recaps and Practice."}</p>
     <div className="actions"><Link className="button primary" href={`/recaps/games/${saved.id}`}>Open saved game</Link><Link className="button secondary" href="/players">View players</Link><Link className="button secondary" href={`/practice?gameId=${saved.id}`}>Plan practice</Link></div>

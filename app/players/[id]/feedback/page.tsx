@@ -7,7 +7,7 @@ import EmailDraft from "./email-draft";
 export default async function FeedbackPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ seasonId?: string }> }) {
   const member = await requireCoach(), { id } = await params, { seasonId } = await searchParams;
   const player = await db.player.findFirst({ where: { id, teamId: member.teamId }, include: {
-    gameLines: { where: { game: { teamId: member.teamId, ...(seasonId ? { seasonId: seasonId === "unassigned" ? null : seasonId } : {}) } }, include: { game: { select: { opponent: true, playedAt: true } } }, orderBy: { game: { playedAt: "desc" } }, take: 5 },
+    gameLines: { where: { game: { teamId: member.teamId, removedAt: null, ...(seasonId ? { seasonId: seasonId === "unassigned" ? null : seasonId } : {}) } }, include: { game: { select: { opponent: true, playedAt: true } } }, orderBy: { game: { playedAt: "desc" } }, take: 5 },
     accessLinks: { where: { member: { teamId: member.teamId, role: "PARENT", status: "APPROVED" } }, include: { member: { include: { user: { select: { name: true, email: true } } } } } }
   } });
   if (!player) notFound();

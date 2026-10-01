@@ -12,7 +12,7 @@ export default async function PracticePage({ searchParams }: { searchParams: Pro
   const get = (key: string) => typeof params[key] === "string" ? params[key] as string : "";
   const seasonId = get("seasonId"), tournamentId = get("tournamentId"), lossesOnly = get("lossesOnly") === "1";
   const [options, tournaments, seasons] = await Promise.all([
-    db.game.findMany({ where: { teamId: member.teamId, ...(seasonId ? { seasonId: seasonId === "unassigned" ? null : seasonId } : {}) }, orderBy: [{ playedAt: "desc" }, { createdAt: "desc" }], select: { id: true, opponent: true, playedAt: true, runsFor: true, runsAgainst: true } }),
+    db.game.findMany({ where: { teamId: member.teamId, removedAt: null, ...(seasonId ? { seasonId: seasonId === "unassigned" ? null : seasonId } : {}) }, orderBy: [{ playedAt: "desc" }, { createdAt: "desc" }], select: { id: true, opponent: true, playedAt: true, runsFor: true, runsAgainst: true } }),
     db.tournament.findMany({ where: { teamId: member.teamId }, orderBy: { createdAt: "desc" } }),
     db.season.findMany({ where: { teamId: member.teamId }, orderBy: { createdAt: "desc" } })
   ]);
@@ -26,7 +26,7 @@ export default async function PracticePage({ searchParams }: { searchParams: Pro
     title = tournament.name;
   }
   const ids = selectedIds.length ? selectedIds : !tournamentId && !get("selection") && options[0] ? [options[0].id] : [];
-  const games = await db.game.findMany({ where: { teamId: member.teamId, ...(tournamentId ? { tournamentId } : { id: { in: ids } }) }, orderBy: [{ playedAt: "desc" }, { createdAt: "desc" }] });
+  const games = await db.game.findMany({ where: { teamId: member.teamId, removedAt: null, ...(tournamentId ? { tournamentId } : { id: { in: ids } }) }, orderBy: [{ playedAt: "desc" }, { createdAt: "desc" }] });
   if (!tournamentId && games.length !== ids.length) notFound();
   const source = lossesOnly ? games.filter(isLoss) : games;
   const priorities = combinedPriorities(source), patterns = lossPatterns(games);

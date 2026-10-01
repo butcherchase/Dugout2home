@@ -28,7 +28,7 @@ try {
   await db.session.create({data:{tokenHash:createHash('sha256').update(token).digest('hex'),userId:user.id,expiresAt:new Date(Date.now()+60000)}});
   const headers={cookie:'__Host-d2h-session='+token,origin:'http://127.0.0.1:3102'};
   for(const [name,type,data] of [['game.csv','text/csv','team,hits\nSparks,3'],['game.pdf','application/pdf','%PDF-mock'],['game.png','image/png','mock-png']]) {
-    const form=new FormData();form.set('scorebook',new Blob([data],{type}),name);
+    const form=new FormData();form.set('scorebook',new Blob([data],{type}),name);form.set('csvScope','single_game');
     const result=await fetch('http://127.0.0.1:3102/api/analyze',{method:'POST',headers,body:form});
     assert.equal(result.status,200,await result.clone().text());assert.equal((await result.json()).analysis.score.us,3);
     const payload=requests.at(-1);assert(JSON.stringify(payload.input).includes(team.name));assert.equal(payload.text.format.strict,true);

@@ -50,6 +50,10 @@ export async function POST(request: Request) {
       );
     }
 
+    if (isCsv && form.get("csvScope") !== "single_game") {
+      return NextResponse.json({ error: "This analyzer saves one game at a time. Cumulative season/tournament CSV totals cannot be saved as an individual game. Use that game’s scorebook or a confirmed single-game CSV." }, { status: 400 });
+    }
+
     const bytes = Buffer.from(await file.arrayBuffer());
 
     let analysis;

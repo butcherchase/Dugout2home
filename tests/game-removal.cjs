@@ -1,0 +1,64 @@
+module.exports = async function ({ db, team, other, coach, admin, parent, player, pending, otherCoach, roster, game, analysis, check, renderPage, setToken, save, input, hash, stamp, aiCalls }) {
+  const { POST } = require('../app/api/games/[id]/status/route.ts');
+  const target = await db.game.create({ data: { teamId: team.id, tournamentId: game.tournamentId, seasonId: (await db.game.findUniqueOrThrow({ where: { id: game.id } })).seasonId, opponent: 'REMOVE_ME_OPPONENT', playedAt: new Date('2026-10-01'), runsFor: 3, runsAgainst: 2, sourceHash: hash('remove-'+stamp), aiSummary: analysis, playerLines: { create: { playerId: roster.id, plateAppearances: 8, hits: 7, notes: ['REMOVE_ONLY_NOTE'] } } } });
+  await db.playerEvaluation.create({ data: { playerId: roster.id, gameId: target.id, source: 'GAME', area: 'HITTING', note: 'REMOVE_ONLY_EVALUATION', sharedWithFamily: true } });
+  const payload = { teamId: team.id, action: 'remove', version: target.updatedAt.toISOString() };
+  async function call(data, token = coach.token, id = target.id, origin = process.env.APP_URL) {
+    setToken(token);
+    const result = await POST(new Request(process.env.APP_URL + '/api/games/'+id+'/status', { method: 'POST', headers: { origin, 'content-type': 'application/json' }, body: JSON.stringify(data) }), { params: Promise.resolve({ id }) });
+    return { status: result.status, body: await result.json() };
+  }
+  check((await call(payload, '')).status === 401, 'game removal requires sign-in');
+  for (const a of [parent, player, pending]) check((await call(payload, a.token)).status === 403, 'game removal requires approved coach');
+  check((await call(payload, coach.token, target.id, 'https://bad.test')).status === 403, 'game removal rejects cross-origin requests');
+  check((await call({ ...payload, teamId: other.id })).status === 409, 'game removal rejects stale team');
+  check((await call({ ...payload, teamId: other.id }, otherCoach.token)).status === 404, 'game removal cannot target another team');
+  check((await call({ ...payload, version: '2000-01-01T00:00:00.000Z' })).status === 409, 'game removal rejects stale version');
+  const visibleFamily = await renderPage('../app/my-player/page.tsx', {}, parent.token);
+  check(visibleFamily.includes('REMOVE_ONLY_EVALUATION'), 'fixture family can see shared game feedback before removal');
+  check((await call(payload)).status === 200, 'coach can remove saved game');
+  const removed = await db.game.findUniqueOrThrow({ where: { id: target.id } });
+  check(!!removed.removedAt && removed.removedBy === coach.user.id, 'removal stores server audit metadata');
+  check(await db.playerGameLine.count({ where: { gameId: target.id } }) === 1 && await db.player.count({ where: { id: roster.id } }) === 1, 'removal retains results and roster for restoration');
+  check((await call(payload)).status === 200, 'repeated removal is harmless');
+  const recaps = await renderPage('../app/recaps/page.tsx', { searchParams: Promise.resolve({}) }, coach.token);
+  check(!recaps.includes('REMOVE_ME_OPPONENT'), 'removed game absent from active recap folders');
+  const tournament = await renderPage('../app/recaps/tournaments/[id]/page.tsx', { params: Promise.resolve({ id: game.tournamentId }) }, coach.token);
+  check(!tournament.includes('REMOVE_ME_OPPONENT'), 'removed game absent from tournament recap and totals');
+  const players = await renderPage('../app/players/page.tsx', {}, coach.token);
+  check(!players.includes('REMOVE_ONLY_NOTE') && !players.includes('REMOVE_ONLY_EVALUATION') && !players.includes('REMOVE_ME_OPPONENT'), 'removed game excluded from player history, evidence and recovery choices');
+  const email = await renderPage('../app/players/[id]/feedback/page.tsx', { params: Promise.resolve({ id: roster.id }), searchParams: Promise.resolve({}) }, coach.token);
+  check(!email.includes('REMOVE_ME_OPPONENT') && !email.includes('REMOVE_ONLY_NOTE'), 'removed game excluded from parent email drafts');
+  const family = await renderPage('../app/my-player/page.tsx', {}, parent.token);
+  check(!family.includes('REMOVE_ONLY_EVALUATION'), 'removed game feedback hidden from linked family');
+  const practice = await renderPage('../app/practice/page.tsx', { searchParams: Promise.resolve({ tournamentId: game.tournamentId }) }, coach.token);
+  check(!practice.includes('REMOVE_ME_OPPONENT'), 'removed game excluded from practice evidence and options');
+  const page = await renderPage('../app/recaps/games/[id]/page.tsx', { params: Promise.resolve({ id: target.id }) }, coach.token);
+  check(page.includes('Restore game') && !page.includes('Create a social recap'), 'old game link shows restore view instead of active recap');
+  const trash = await renderPage('../app/recaps/removed/page.tsx', {}, coach.token);
+  check(trash.includes('REMOVE_ME_OPPONENT') && trash.includes('Restore game'), 'removed-games list provides recovery');
+  const outsiderTrash = await renderPage('../app/recaps/removed/page.tsx', {}, otherCoach.token);
+  check(!outsiderTrash.includes('REMOVE_ME_OPPONENT'), 'removed-games list remains team-scoped');
+  const duplicate = await save({ ...input, sourceHash: target.sourceHash }, coach.token);
+  check(duplicate.status === 200 && duplicate.body.removed && duplicate.body.id === target.id, 'repeat upload does not silently restore removed game');
+  setToken(coach.token);
+  const recovery = await require('../app/api/games/[id]/development/route.ts').POST(new Request(process.env.APP_URL + '/api/games/'+target.id+'/development', { method: 'POST', headers: { origin: process.env.APP_URL, 'content-type': 'application/json' }, body: JSON.stringify({ action: 'preview', teamId: team.id }) }), { params: Promise.resolve({ id: target.id }) });
+  check(recovery.status === 404, 'development recovery cannot modify removed game');
+  const restore = { ...payload, action: 'restore', version: removed.updatedAt.toISOString() };
+  check((await call(restore, parent.token)).status === 403, 'family cannot restore removed games');
+  check((await call(restore, admin.token)).status === 200, 'admin can restore game');
+  check((await call(restore, admin.token)).status === 200 && await db.playerGameLine.count({ where: { gameId: target.id } }) === 1, 'repeat restore does not duplicate player results');
+  const restored = await db.game.findUniqueOrThrow({ where: { id: target.id } });
+  check(restored.removedAt === null && restored.tournamentId === target.tournamentId && restored.runsFor === target.runsFor, 'restore retains original game score and tournament');
+  check((await call(payload)).status === 409, 'old remove confirmation cannot undo a newer restore');
+  const playersAfter = await renderPage('../app/players/page.tsx', {}, coach.token);
+  check(playersAfter.includes('REMOVE_ONLY_NOTE') && playersAfter.includes('REMOVE_ME_OPPONENT'), 'restored evidence returns to player views');
+  const callsBefore = aiCalls.length;
+  const analyze = require('../app/api/analyze/route.ts').POST;
+  for (const scope of ['', 'cumulative', 'unknown']) {
+    setToken(coach.token); const form = new FormData();form.set('scorebook', new Blob(['player,K\nExample,14'], { type: 'text/csv' }), 'season.csv');form.set('csvScope', scope);
+    const response = await analyze(new Request(process.env.APP_URL+'/api/analyze', { method: 'POST', headers: { origin: process.env.APP_URL }, body: form }));
+    check(response.status === 400, 'cumulative or undeclared CSV scope cannot enter single-game analyzer');
+  }
+  check(aiCalls.length === callsBefore, 'CSV scope rejection occurs before an AI request');
+};

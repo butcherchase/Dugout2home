@@ -10,7 +10,7 @@ export default async function MyPlayerPage() {
   const players = await db.player.findMany({
     where: { teamId: member.teamId, active: true, accessLinks: { some: { memberId: member.id } } },
     select: { id: true, firstName: true, lastName: true, jersey: true, positions: true,
-      evaluations: { where: { sharedWithFamily: true }, select: { id: true, area: true, score: true, note: true, createdAt: true }, orderBy: { createdAt: "desc" } } },
+      evaluations: { where: { sharedWithFamily: true, OR: [{ gameId: null }, { game: { removedAt: null } }] }, select: { id: true, area: true, score: true, note: true, createdAt: true }, orderBy: { createdAt: "desc" } } },
     orderBy: { firstName: "asc" }
   });
   return <div className="shell page"><span className="eyebrow">{member.team.name}</span><h1>{member.role === "PLAYER" ? "My development" : "My players"}</h1>

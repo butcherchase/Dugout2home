@@ -1,3 +1,4 @@
+import GameStatus from "@/app/recaps/game-status";
 import ShareRecap from "@/app/recaps/share-recap";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -12,12 +13,14 @@ export default async function GamePage({ params }: { params: Promise<{ id: strin
   const { id } = await params;
   const game = await db.game.findFirst({ where: { id, teamId: member.teamId }, include: { tournament: true, playerLines: { where: { player: { teamId: member.teamId } }, include: { player: true } } } });
   if (!game) notFound();
+  if (game.removedAt) return <div className="shell page"><Link href="/recaps/removed">← Removed games</Link><h1>Removed: vs. {game.opponent}</h1><section className="panel"><p>This game is excluded from player totals, tournament records and practice evidence.</p><GameStatus teamId={member.teamId} gameId={game.id} opponent={game.opponent} version={game.updatedAt.toISOString()} removed /></section></div>;
   const tournaments = await db.tournament.findMany({ where: { teamId: member.teamId }, orderBy: { createdAt: "desc" } });
   const seasons = await db.season.findMany({ where: { teamId: member.teamId }, orderBy: { createdAt: "desc" } });
   const analysis = readAnalysis(game.aiSummary);
   return <div className="shell page game-details"><Link href="/recaps" className="breadcrumb">← All games and tournaments</Link><span className="eyebrow">{member.team.name} · SAVED GAME</span><h1>vs. {game.opponent}</h1><p className="lede">{gameDateLabel(game.playedAt)} · {game.runsFor ?? "—"}–{game.runsAgainst ?? "—"}</p>
     {game.tournament && <p>Tournament: <Link href={`/recaps/tournaments/${game.tournament.id}`}>{game.tournament.name}</Link></p>}
     <ShareRecap teamName={member.team.name} logoData={member.team.logoData} title={`vs. ${game.opponent}`} score={`${game.runsFor ?? "—"}–${game.runsAgainst ?? "—"}`} initialCaption={`${member.team.name} vs. ${game.opponent} | ${gameDateLabel(game.playedAt)}\nFinal score: ${game.runsFor ?? "—"}–${game.runsAgainst ?? "—"}.\nGrowing together, one game at a time. #Dugout2Home`} />
+    <section className="panel"><GameStatus teamId={member.teamId} gameId={game.id} opponent={game.opponent} version={game.updatedAt.toISOString()} /></section>
     <div className="actions"><Link className="button primary" href={`/practice?gameId=${game.id}`}>Build practice from this game</Link><Link className="button secondary" href="/players">View player totals</Link></div>
     <form action={assignTournament} className="panel form-stack inline-select"><input type="hidden" name="teamId" value={member.teamId} /><input type="hidden" name="gameId" value={game.id} /><label>Assign tournament<select name="tournamentId" defaultValue={game.tournamentId ?? ""}><option value="">Standalone game</option>{tournaments.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</select></label><Submit>Update tournament</Submit></form>
     {!game.tournamentId && <form action={assignSeason} className="panel form-stack"><input type="hidden" name="teamId" value={member.teamId} /><input type="hidden" name="gameId" value={game.id} /><label>Season<select name="seasonId" defaultValue={game.seasonId ?? ""}><option value="">Unassigned season</option>{seasons.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></label><Submit>Update season</Submit></form>}

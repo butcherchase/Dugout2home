@@ -23,7 +23,7 @@ export async function POST(request: Request) {
       // Serialize a team's imports so concurrent clicks cannot duplicate games or new roster entries.
       await tx.$queryRaw`SELECT "id" FROM "Team" WHERE "id" = ${teamId} FOR UPDATE`;
       const existing = await tx.game.findUnique({ where: { teamId_sourceHash: { teamId, sourceHash: input.sourceHash } } });
-      if (existing) return { id: existing.id, duplicate: true };
+      if (existing) return { id: existing.id, duplicate: true, removed: !!existing.removedAt };
       const roster = await tx.player.findMany({ where: { teamId } });
       const selected = input.playerTargets.filter(id => id !== "new" && id !== "skip");
       if (selected.length !== new Set(selected).size) throw new InputError("Two scorebook rows cannot be assigned to the same player. Correct the rows or skip the duplicate.");
